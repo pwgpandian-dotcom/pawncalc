@@ -20,14 +20,19 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 }
 
-// CORS — allowlist from env, fallback to localhost in dev
-const allowedOrigins = process.env.ALLOWED_ORIGINS
+// CORS — allowlist from env; always allow Vercel deploys + localhost
+const extraOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : ['http://localhost:5173', 'http://localhost:4173'];
+  : [];
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    if (!origin) return cb(null, true); // same-origin / mobile apps
+    if (
+      origin.endsWith('.vercel.app') ||
+      origin.startsWith('http://localhost') ||
+      extraOrigins.includes(origin)
+    ) return cb(null, true);
     cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true
