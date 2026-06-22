@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PawnCalc — Pawn Broker Finance Calculator</title>
+  <style>
+    /* ── Theme tokens ── */
+    :root {
+      --bg:           #0b0b18;
+      --surface:      #12121f;
+      --card:         #181830;
+      --border:       #252545;
+      --border2:      #1e1e3a;
+      --gold:         #f0b429;
+      --gold-dim:     rgba(240,180,41,0.12);
+      --gold-ring:    rgba(240,180,41,0.35);
+      --green:        #22c55e;
+      --green-dim:    rgba(34,197,94,0.10);
+      --green-ring:   rgba(34,197,94,0.35);
+      --red:          #f87171;
+      --red-dim:      rgba(248,113,113,0.10);
+      --red-ring:     rgba(248,113,113,0.35);
+      --blue:         #60a5fa;
+      --blue-dim:     rgba(96,165,250,0.10);
+      --blue-ring:    rgba(96,165,250,0.35);
+      --text:         #f1f5f9;
+      --muted:        #7c8db5;
+      --ph:           #2e2e55;
+      --logo-from:    #f0b429;
+      --logo-to:      #fde68a;
+      --radius:       18px;
+    }
+
+    [data-theme="light"] {
+      --bg:           #f2efe8;
+      --surface:      #ffffff;
+      --card:         #ffffff;
+      --border:       #ddd8ce;
+      --border2:      #e8e3da;
+      --gold:         #a06800;
+      --gold-dim:     rgba(160,104,0,0.08);
+      --gold-ring:    rgba(160,104,0,0.28);
+      --green:        #15803d;
+      --green-dim:    rgba(21,128,61,0.08);
+      --green-ring:   rgba(21,128,61,0.28);
+      --red:          #c42a2a;
+      --red-dim:      rgba(196,42,42,0.08);
+      --red-ring:     rgba(196,42,42,0.28);
+      --blue:         #1d4ed8;
+      --blue-dim:     rgba(29,78,216,0.08);
+      --blue-ring:    rgba(29,78,216,0.28);
+      --text:         #1a1829;
+      --muted:        #6b7280;
+      --ph:           #c9c4bc;
+      --logo-from:    #a06800;
+      --logo-to:      #c88a00;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { transition: background 0.28s, color 0.28s; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 20px 64px;
+      transition: background 0.28s, color 0.28s;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 44px;
+      position: relative;
+    }
+
+    /* Theme toggle — top-right of header */
+    .theme-btn {
+      position: absolute;
+      top: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+    }
+    .theme-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .theme-btn .icon { font-size: 1rem; line-height: 1; }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .logo-icon { font-size: 2rem; line-height: 1; }
+    .logo h1 {
+      font-size: 2.1rem;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      background: linear-gradient(130deg, var(--logo-from) 0%, var(--logo-to) 60%, var(--logo-from) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      letter-spacing: 0.4px;
+    }
+
+    /* ── Grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 26px 24px 22px;
+      display: flex;
+      flex-direction: column;
+      transition: background 0.28s, border-color 0.28s;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border2);
+    }
+    .card-emoji { font-size: 1.9rem; line-height: 1; flex-shrink: 0; margin-top: 2px; }
+    .card-meta  { flex: 1; min-width: 0; }
+    .card-title { font-size: 1.0rem; font-weight: 800; color: var(--text); line-height: 1.3; }
+    .card-sub   { font-size: 0.76rem; color: var(--muted); margin-top: 3px; }
+
+    .badge {
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .badge-gold { background: var(--gold-dim); color: var(--gold); border: 1px solid var(--gold-ring); }
+    .badge-blue { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue-ring); }
+
+    /* ── Fields ── */
+    .fields { display: flex; flex-direction: column; gap: 14px; margin-bottom: 16px; }
+    .field-label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+    }
+    input[type="number"] {
+      width: 100%;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 11px;
+      padding: 13px 16px;
+      color: var(--text);
+      font-size: 1.05rem;
+      font-weight: 700;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.28s, color 0.28s;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    input[type="number"]::placeholder { color: var(--ph); font-weight: 400; }
+    input[type="number"]:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px var(--gold-dim);
+    }
+
+    /* ── Deduction toggle row ── */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 13px 15px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 11px;
+      margin-bottom: 18px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.28s;
+      user-select: none;
+    }
+    .toggle-wrap:hover { border-color: var(--gold); }
+    .toggle-text { font-size: 0.84rem; font-weight: 600; color: var(--text); line-height: 1.35; }
+
+    .switch {
+      position: relative;
+      width: 46px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .track {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 999px;
+      transition: background 0.25s;
+      cursor: pointer;
+    }
+    .track::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 20px; height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.25s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+    }
+    .switch input:checked ~ .track { background: var(--gold); }
+    .switch input:checked ~ .track::after { transform: translateX(20px); }
+
+    /* ── Result rows ── */
+    .results { display: flex; flex-direction: column; gap: 9px; }
+
+    .rbox {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      transition: background 0.28s, border-color 0.28s;
+    }
+    .rbox.gold  { background: var(--gold-dim);  border-color: var(--gold-ring); }
+    .rbox.green { background: var(--green-dim); border-color: var(--green-ring); }
+    .rbox.red   { background: var(--red-dim);   border-color: var(--red-ring); }
+    .rbox.blue  { background: var(--blue-dim);  border-color: var(--blue-ring); }
+
+    .rbox-label {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.45px;
+      color: var(--muted);
+      line-height: 1.3;
+    }
+    .rbox-value {
+      font-size: 1.12rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .rbox-value.gold  { color: var(--gold); }
+    .rbox-value.green { color: var(--green); }
+    .rbox-value.red   { color: var(--red); }
+    .rbox-value.blue  { color: var(--blue); }
+
+    .divider { height: 1px; background: var(--border2); margin: 2px 0; }
+
+    /* Big hero result */
+    .hero-box {
+      border-radius: 14px;
+      padding: 20px 18px 18px;
+      text-align: center;
+      margin-top: 2px;
+      transition: background 0.28s, border-color 0.28s;
+    }
+    .hero-box.green { background: var(--green-dim); border: 1.5px solid var(--green-ring); }
+    .hero-box.blue  { background: var(--blue-dim);  border: 1.5px solid var(--blue-ring); }
+    .hero-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+    .hero-value {
+      font-size: 2.2rem;
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1.1;
+    }
+    .hero-value.green { color: var(--green); }
+    .hero-value.blue  { color: var(--blue); }
+
+    /* ── Print button ── */
+    .btn-print {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px 16px;
+      margin-top: 18px;
+      border-radius: 11px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      letter-spacing: 0.3px;
+    }
+    .btn-print:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: var(--gold-dim);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; gap: 20px; }
+    }
+
+    @media (max-width: 520px) {
+      body { padding: 20px 12px 52px; }
+
+      header { margin-bottom: 32px; }
+
+      .theme-btn { padding: 7px 11px; font-size: 0.75rem; }
+      .theme-btn .label { display: none; }   /* show only icon on tiny screens */
+
+      .logo h1 { font-size: 1.65rem; }
+      .logo-icon { font-size: 1.6rem; }
+      header p { font-size: 0.82rem; }
+
+      .card { padding: 18px 14px 16px; border-radius: 14px; }
+      .card-head { gap: 10px; margin-bottom: 18px; padding-bottom: 14px; }
+      .card-emoji { font-size: 1.6rem; }
+      .card-title { font-size: 0.92rem; }
+      .card-sub   { font-size: 0.72rem; }
+      .badge { display: none; }
+
+      .fields { gap: 11px; margin-bottom: 14px; }
+      input[type="number"] { padding: 11px 13px; font-size: 0.98rem; }
+
+      .toggle-wrap { padding: 11px 13px; margin-bottom: 14px; }
+      .toggle-text { font-size: 0.8rem; }
+
+      .rbox { padding: 10px 13px; }
+      .rbox-label { font-size: 0.69rem; }
+      .rbox-value { font-size: 1rem; }
+
+      .hero-box { padding: 16px 14px 14px; border-radius: 12px; }
+      .hero-value { font-size: 1.75rem; }
+
+      .btn-print { padding: 11px 14px; font-size: 0.8rem; }
+    }
+
+    @media (max-width: 360px) {
+      .logo h1 { font-size: 1.45rem; }
+      .hero-value { font-size: 1.5rem; }
+    }
+
+    /* ── Print stylesheet ── */
+    @media print {
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()">
+    <span class="icon" id="theme-icon">☀️</span>
+    <span class="label" id="theme-label">Light Mode</span>
+  </button>
+
+  <div class="logo">
+    <span class="logo-icon">⚖️</span>
+    <h1>PawnCalc</h1>
+  </div>
+  <p>Professional Pawn Broker Finance Calculator</p>
+</header>
+
+<div class="grid">
+
+  <!-- ════════════════════════════════════
+       CARD 1 — Customer Payout
+  ════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-emoji">💵</span>
+      <div class="card-meta">
+        <div class="card-title">Customer Payout Calculation</div>
+        <div class="card-sub">Loan amount given to customer</div>
+      </div>
+      <span class="badge badge-gold">Mode 1</span>
+    </div>
+
+    <div class="fields">
+      <div>
+        <label class="field-label">Loan Amount (₹)</label>
+        <input type="number" id="p-amount" placeholder="e.g. 5000" min="0" oninput="calcPayout()" />
+      </div>
+      <div>
+        <label class="field-label">Interest Rate (% per month)</label>
+        <input type="number" id="p-rate" placeholder="e.g. 2" min="0" step="0.1" oninput="calcPayout()" />
+      </div>
+    </div>
+
+    <label class="toggle-wrap no-print" for="p-toggle">
+      <span class="toggle-text">☑ Deduct First Month Interest Before Giving Loan</span>
+      <span class="switch">
+        <input type="checkbox" id="p-toggle" onchange="calcPayout()" />
+        <span class="track"></span>
+      </span>
+    </label>
+
+    <div class="results">
+      <div class="rbox gold">
+        <span class="rbox-label">🏦 Total Loan Amount</span>
+        <span class="rbox-value gold" id="p-total">₹0</span>
+      </div>
+      <div class="rbox red" id="p-deduct-row" style="display:none">
+        <span class="rbox-label">📉 Interest Deducted in Advance</span>
+        <span class="rbox-value red" id="p-deducted">₹0</span>
+      </div>
+      <div class="hero-box green">
+        <div class="hero-label">💵 Amount Given To Customer</div>
+        <div class="hero-value green" id="p-payout">₹0</div>
+      </div>
+    </div>
+
+    <button class="btn-print no-print" onclick="printPayout()">🖨️ Print Customer Receipt</button>
+  </div>
+
+  <!-- ════════════════════════════════════
+       CARD 2 — Loan Closing
+  ════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-emoji">🔒</span>
+      <div class="card-meta">
+        <div class="card-title">Loan Closing Settlement</div>
+        <div class="card-sub">Final amount customer must pay to close loan</div>
+      </div>
+      <span class="badge badge-blue">Mode 2</span>
+    </div>
+
+    <div class="fields">
+      <div>
+        <label class="field-label">Loan Amount (₹)</label>
+        <input type="number" id="c-amount" placeholder="e.g. 5000" min="0" oninput="calcClosing()" />
+      </div>
+      <div>
+        <label class="field-label">Interest Rate (% per month)</label>
+        <input type="number" id="c-rate" placeholder="e.g. 2" min="0" step="0.1" oninput="calcClosing()" />
+      </div>
+      <div>
+        <label class="field-label">📆 Total Loan Months</label>
+        <input type="number" id="c-months" placeholder="e.g. 5" min="1" oninput="calcClosing()" />
+      </div>
+      <div>
+        <label class="field-label">✅ Interest Months Already Paid</label>
+        <input type="number" id="c-paid" placeholder="0" min="0" value="0" oninput="calcClosing()" />
+      </div>
+    </div>
+
+    <div class="results">
+      <div class="rbox">
+        <span class="rbox-label">📆 Total Loan Months</span>
+        <span class="rbox-value" id="c-total-months">0 Months</span>
+      </div>
+      <div class="rbox green">
+        <span class="rbox-label">✅ Interest Already Paid</span>
+        <span class="rbox-value green" id="c-paid-months">0 Months</span>
+      </div>
+      <div class="rbox">
+        <span class="rbox-label">⌛ Remaining Interest Months</span>
+        <span class="rbox-value" id="c-remaining-months">0 Months</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="rbox red">
+        <span class="rbox-label">📈 Pending Interest</span>
+        <span class="rbox-value red" id="c-interest">₹0</span>
+      </div>
+      <div class="rbox">
+        <span class="rbox-label">🏦 Loan Principal</span>
+        <span class="rbox-value gold" id="c-principal">₹0</span>
+      </div>
+
+      <div class="hero-box blue">
+        <div class="hero-label">💰 Final Closing Amount</div>
+        <div class="hero-value blue" id="c-closing">₹0</div>
+      </div>
+    </div>
+
+    <button class="btn-print no-print" onclick="printClosing()">🖨️ Print Settlement Receipt</button>
+  </div>
+
+</div>
+
+<script>
+  /* ── Theme toggle ── */
+  const html = document.documentElement;
+
+  function applyTheme(t) {
+    html.setAttribute('data-theme', t);
+    const isDark = t === 'dark';
+    document.getElementById('theme-icon').textContent  = isDark ? '☀️' : '🌙';
+    document.getElementById('theme-label').textContent = isDark ? 'Light Mode' : 'Dark Mode';
+    localStorage.setItem('pc-theme', t);
+  }
+
+  function toggleTheme() {
+    applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  }
+
+  /* restore saved preference */
+  const saved = localStorage.getItem('pc-theme');
+  if (saved) applyTheme(saved);
+
+  /* ── Formatter ── */
+  function fmt(n) {
+    return '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+  function mths(n) {
+    return n + ' Month' + (n !== 1 ? 's' : '');
+  }
+
+  /* ── Mode 1: Payout ── */
+  function calcPayout() {
+    const amount = parseFloat(document.getElementById('p-amount').value) || 0;
+    const rate   = parseFloat(document.getElementById('p-rate').value)   || 0;
+    const deduct = document.getElementById('p-toggle').checked;
+
+    const interest = amount * (rate / 100);
+    const payout   = deduct ? amount - interest : amount;
+
+    document.getElementById('p-total').textContent    = fmt(amount);
+    document.getElementById('p-deducted').textContent = fmt(interest);
+    document.getElementById('p-payout').textContent   = fmt(payout);
+    document.getElementById('p-deduct-row').style.display = deduct ? 'flex' : 'none';
+  }
+
+  /* ── Mode 2: Closing ── */
+  function calcClosing() {
+    const amount      = parseFloat(document.getElementById('c-amount').value) || 0;
+    const rate        = parseFloat(document.getElementById('c-rate').value)   || 0;
+    const totalMonths = parseInt(document.getElementById('c-months').value)   || 0;
+    const rawPaid     = parseInt(document.getElementById('c-paid').value)     || 0;
+    const paidMonths  = Math.min(rawPaid, totalMonths);
+    const remaining   = Math.max(totalMonths - paidMonths, 0);
+
+    const interest = amount * (rate / 100) * remaining;
+    const closing  = amount + interest;
+
+    document.getElementById('c-total-months').textContent     = mths(totalMonths);
+    document.getElementById('c-paid-months').textContent      = mths(paidMonths);
+    document.getElementById('c-remaining-months').textContent = mths(remaining);
+    document.getElementById('c-interest').textContent         = fmt(interest);
+    document.getElementById('c-principal').textContent        = fmt(amount);
+    document.getElementById('c-closing').textContent          = fmt(closing);
+  }
+
+  /* ── Print helpers ── */
+  function printPayout() {
+    const amount   = parseFloat(document.getElementById('p-amount').value) || 0;
+    const rate     = parseFloat(document.getElementById('p-rate').value)   || 0;
+    const deduct   = document.getElementById('p-toggle').checked;
+    const interest = amount * (rate / 100);
+    const payout   = deduct ? amount - interest : amount;
+    const now = new Date().toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'short' });
+
+    openReceipt(`
+      <div class="rh">
+        <div class="brand">⚖️ PawnCalc</div>
+        <div class="rtitle">💵 Customer Payout Receipt</div>
+        <div class="rdate">${now}</div>
+      </div>
+      <table>
+        <tr><td>Total Loan Amount</td><td class="a gold">${fmt(amount)}</td></tr>
+        <tr><td>Interest Rate</td><td class="a">${rate}% per month</td></tr>
+        ${deduct ? `<tr class="dr"><td>Interest Deducted in Advance (1st Month)</td><td class="a red">− ${fmt(interest)}</td></tr>` : ''}
+      </table>
+      <div class="bigrow green">
+        <span>💵 Amount Given To Customer</span>
+        <span>${fmt(payout)}</span>
+      </div>`);
+  }
+
+  function printClosing() {
+    const amount      = parseFloat(document.getElementById('c-amount').value) || 0;
+    const rate        = parseFloat(document.getElementById('c-rate').value)   || 0;
+    const totalMonths = parseInt(document.getElementById('c-months').value)   || 0;
+    const rawPaid     = parseInt(document.getElementById('c-paid').value)     || 0;
+    const paidMonths  = Math.min(rawPaid, totalMonths);
+    const remaining   = Math.max(totalMonths - paidMonths, 0);
+    const interest    = amount * (rate / 100) * remaining;
+    const closing     = amount + interest;
+    const now = new Date().toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'short' });
+
+    openReceipt(`
+      <div class="rh">
+        <div class="brand">⚖️ PawnCalc</div>
+        <div class="rtitle">🔒 Loan Closing Settlement Receipt</div>
+        <div class="rdate">${now}</div>
+      </div>
+      <table>
+        <tr><td>Loan Principal</td><td class="a gold">${fmt(amount)}</td></tr>
+        <tr><td>Interest Rate</td><td class="a">${rate}% per month</td></tr>
+        <tr><td>Total Loan Duration</td><td class="a">${mths(totalMonths)}</td></tr>
+        <tr class="pr"><td>✅ Interest Already Paid</td><td class="a green">${mths(paidMonths)}</td></tr>
+        <tr><td>⌛ Remaining Interest Months</td><td class="a">${mths(remaining)}</td></tr>
+        <tr class="dr"><td>📈 Pending Interest</td><td class="a red">${fmt(interest)}</td></tr>
+      </table>
+      <div class="bigrow blue">
+        <span>💰 Final Closing Amount</span>
+        <span>${fmt(closing)}</span>
+      </div>`);
+  }
+
+  function openReceipt(html) {
+    const w = window.open('', '_blank', 'width=520,height=720');
+    w.document.write(`<!DOCTYPE html><html><head>
+      <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+      <title>PawnCalc Receipt</title>
+      <style>
+        body{font-family:'Segoe UI',sans-serif;background:#fff;color:#111;padding:36px 40px;max-width:480px;margin:0 auto}
+        .rh{text-align:center;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #222}
+        .brand{font-size:.9rem;font-weight:700;color:#888;letter-spacing:1px}
+        .rtitle{font-size:1.2rem;font-weight:800;margin:6px 0 4px}
+        .rdate{font-size:.78rem;color:#888}
+        table{width:100%;border-collapse:collapse;margin-bottom:10px}
+        td{padding:9px 4px;border-bottom:1px solid #eee;font-size:.88rem}
+        .a{text-align:right;font-weight:700}
+        .gold{color:#8a6000}.green{color:#15803d}.red{color:#c42a2a}.blue{color:#1d4ed8}
+        .dr td{background:#fff5f5}.pr td{background:#f0fdf4}
+        .bigrow{display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-radius:10px;font-size:1.15rem;font-weight:900;margin-top:8px}
+        .bigrow.green{background:#dcfce7;color:#15803d;border:2px solid #86efac}
+        .bigrow.blue{background:#dbeafe;color:#1d4ed8;border:2px solid #93c5fd}
+        .footer{margin-top:24px;text-align:center;font-size:.72rem;color:#aaa;border-top:1px solid #eee;padding-top:14px}
+        .btn{display:block;margin:18px auto 0;padding:10px 26px;background:#111;color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer}
+        @media print{.btn{display:none}}
+        @media(max-width:480px){body{padding:24px 20px}.bigrow{font-size:1rem;padding:12px 14px}}
+      </style>
+    </head><body>
+      ${html}
+      <div class="footer">Generated by PawnCalc — Professional Pawn Broker Finance Calculator</div>
+      <button class="btn" onclick="window.print()">🖨️ Print</button>
+    </body></html>`);
+    w.document.close();
+  }
+</script>
+
+</body>
+</html>

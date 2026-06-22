@@ -1,0 +1,14 @@
+{
+  "name": "pawncalc",
+  "version": "1.0.0",
+  "description": "PawnCalc — Pawn Broker Finance Management",
+  "scripts": {
+    "start": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev",
+    "seed": "cd backend && node src/seed.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
