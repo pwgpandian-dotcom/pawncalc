@@ -99,11 +99,11 @@ export default function Calculator() {
             <h2 className="font-bold text-slate-700 dark:text-slate-200">💵 Customer Payout Calculation</h2>
             <div>
               <label className="label">Loan Amount (₹)</label>
-              <input type="number" className="input" placeholder="50000" value={p1.amount} onChange={e => setP1(f => ({ ...f, amount: e.target.value }))} />
+              <input type="number" inputMode="numeric" className="input" placeholder="50000" value={p1.amount} onChange={e => setP1(f => ({ ...f, amount: e.target.value }))} />
             </div>
             <div>
               <label className="label">Interest Rate (% / month)</label>
-              <input type="number" className="input" placeholder="2" step="0.1" value={p1.rate} onChange={e => setP1(f => ({ ...f, rate: e.target.value }))} />
+              <input type="number" inputMode="decimal" className="input" placeholder="2" step="0.1" value={p1.rate} onChange={e => setP1(f => ({ ...f, rate: e.target.value }))} />
             </div>
             <label className="flex items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-gold-500 transition-all">
               <span className="text-sm font-semibold">☑ Deduct First Month Interest Before Giving Loan</span>
@@ -143,11 +143,11 @@ export default function Calculator() {
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
                 <label className="label">Loan Amount (₹)</label>
-                <input type="number" className="input" placeholder="50000" value={p2.amount} onChange={e => setP2(f => ({ ...f, amount: e.target.value }))} />
+                <input type="number" inputMode="numeric" className="input" placeholder="50000" value={p2.amount} onChange={e => setP2(f => ({ ...f, amount: e.target.value }))} />
               </div>
               <div>
                 <label className="label">Interest Rate (% / mo)</label>
-                <input type="number" className="input" placeholder="2" step="0.1" value={p2.rate} onChange={e => setP2(f => ({ ...f, rate: e.target.value }))} />
+                <input type="number" inputMode="decimal" className="input" placeholder="2" step="0.1" value={p2.rate} onChange={e => setP2(f => ({ ...f, rate: e.target.value }))} />
               </div>
               <div>
                 <label className="label">Pawn Date</label>
@@ -159,7 +159,7 @@ export default function Calculator() {
               </div>
               <div className="sm:col-span-2">
                 <label className="label">✅ Interest Months Already Paid</label>
-                <input type="number" className="input" min="0" value={p2.paidMonths} onChange={e => setP2(f => ({ ...f, paidMonths: e.target.value }))} />
+                <input type="number" inputMode="numeric" pattern="[0-9]*" className="input" min="0" value={p2.paidMonths} onChange={e => setP2(f => ({ ...f, paidMonths: e.target.value }))} />
               </div>
             </div>
             <button onClick={printSettlement} disabled={!p2.amount || !p2.pawnDate} className="btn-outline w-full">🖨️ Print Settlement Receipt</button>

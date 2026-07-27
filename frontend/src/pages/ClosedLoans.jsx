@@ -25,7 +25,7 @@ export default function ClosedLoans() {
         <p className="text-slate-500 text-sm">{loans.length} loan{loans.length !== 1 ? 's' : ''} closed</p>
       </div>
 
-      <input className="input max-w-sm" placeholder="🔍 Search…" value={q} onChange={e => setQ(e.target.value)} />
+      <input type="search" className="input max-w-sm" placeholder="🔍 Search…" value={q} onChange={e => setQ(e.target.value)} />
 
       <div className="card">
         {loading ? (

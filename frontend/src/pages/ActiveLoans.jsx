@@ -28,7 +28,7 @@ export default function ActiveLoans() {
         <Link to="/loans/new" className="btn-gold">➕ New Loan</Link>
       </div>
 
-      <input className="input max-w-sm" placeholder="🔍 Search loan, customer, item…" value={q} onChange={e => setQ(e.target.value)} />
+      <input type="search" className="input max-w-sm" placeholder="🔍 Search loan, customer, item…" value={q} onChange={e => setQ(e.target.value)} />
 
       <div className="card">
         {loading ? (
@@ -42,7 +42,7 @@ export default function ActiveLoans() {
             <table>
               <thead><tr>
                 <th>Loan #</th><th>Customer</th><th>Item</th>
-                <th>Principal</th><th>Rate</th><th>Pawn Date</th><th>Expected Close</th><th></th>
+                <th>Principal</th><th>Given to Customer</th><th>Rate</th><th>Pawn Date</th><th>Expected Close</th><th></th>
               </tr></thead>
               <tbody>
                 {filtered.map(l => {
@@ -56,6 +56,7 @@ export default function ActiveLoans() {
                       </td>
                       <td>{l.itemDescription}</td>
                       <td className="font-bold">{fmt(l.principalAmount)}</td>
+                      <td className="font-bold text-emerald-500">{fmt(l.amountGivenToCustomer != null ? l.amountGivenToCustomer : l.principalAmount)}</td>
                       <td>{l.interestRate}%</td>
                       <td className="text-slate-500">{fmtDate(l.pawnDate)}</td>
                       <td>

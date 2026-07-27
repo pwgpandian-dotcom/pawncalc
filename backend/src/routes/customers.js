@@ -34,8 +34,8 @@ router.get('/:id', async (req, res) => {
 
 router.post('/',
   body('name').trim().notEmpty().withMessage('Customer name is required'),
-  body('phone').trim().notEmpty().withMessage('Phone number is required')
-    .matches(/^[0-9+\-\s]{7,15}$/).withMessage('Invalid phone number'),
+  body('phone').trim().notEmpty().withMessage('Mobile number is required')
+    .matches(/^[0-9]{10}$/).withMessage('Mobile number must be exactly 10 digits'),
   validate,
   async (req, res) => {
     try {
@@ -47,7 +47,7 @@ router.post('/',
 
 router.put('/:id',
   body('name').optional().trim().notEmpty().withMessage('Name cannot be blank'),
-  body('phone').optional().matches(/^[0-9+\-\s]{7,15}$/).withMessage('Invalid phone'),
+  body('phone').optional().matches(/^[0-9]{10}$/).withMessage('Mobile number must be exactly 10 digits'),
   validate,
   async (req, res) => {
     try {

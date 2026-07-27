@@ -23,6 +23,49 @@ export function calcSettlement(principal, rate, totalMonths, paidMonths = 0) {
   };
 }
 
+// Auto interest rule: below ₹10,000 → 2.5%/month, otherwise 2%/month.
+export function autoInterestRate(amount) {
+  return Number(amount) < 10000 ? 2.5 : 2;
+}
+
+// Principal segments: the original principal from the pawn date, plus each extra
+// top-up from the date it was borrowed. Used for accurate, time-weighted interest.
+export function principalSegments(loan) {
+  const extras   = loan.extraAmounts || [];
+  const extraSum = extras.reduce((s, e) => s + (e.amount || 0), 0);
+  const original = (loan.principalAmount || 0) - extraSum;
+  const segs = [{ amount: original, date: loan.pawnDate }];
+  extras.forEach(e => segs.push({ amount: e.amount, date: e.date || e.createdAt || loan.pawnDate }));
+  return segs;
+}
+
+// Interest accrued to `asOf`, computed per segment so extras only accrue from
+// their own date (future interest on the updated principal).
+export function accruedInterest(loan, asOf = new Date()) {
+  return principalSegments(loan).reduce(
+    (sum, s) => sum + calcInterest(s.amount, loan.interestRate, calcMonths(s.date, asOf)), 0
+  );
+}
+
+export function paidInterest(loan) {
+  return (loan.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
+}
+
+// Full settlement for a loan object (handles extra amounts). Returns the current
+// principal, interest accrued/paid, pending interest and the settlement total.
+export function loanSettlement(loan, asOf = new Date()) {
+  const accrued = accruedInterest(loan, asOf);
+  const paid    = paidInterest(loan);
+  const pending = Math.max(accrued - paid, 0);
+  return {
+    principal: loan.principalAmount || 0,
+    accrued,
+    paid,
+    interest: pending,
+    total: (loan.principalAmount || 0) + pending
+  };
+}
+
 export function calcPayout(principal, rate, deductAdvance) {
   const interest = deductAdvance ? calcInterest(principal, rate, 1) : 0;
   return {

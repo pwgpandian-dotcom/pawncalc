@@ -95,17 +95,17 @@ export default function Staff() {
           <form onSubmit={handleAdd} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">Full Name</label>
-              <input className="input" required value={form.name}
+              <input className="input" type="text" autoComplete="name" required value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="John Doe" />
             </div>
             <div>
               <label className="label">Email</label>
-              <input className="input" type="email" required value={form.email}
+              <input className="input" type="email" inputMode="email" autoComplete="off" required value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="john@shop.com" />
             </div>
             <div>
               <label className="label">Password (min 6 chars)</label>
-              <input className="input" type="password" required minLength={6} value={form.password}
+              <input className="input" type="password" autoComplete="new-password" required minLength={6} value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
             </div>
             <div>

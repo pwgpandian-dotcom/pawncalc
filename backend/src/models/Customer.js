@@ -4,6 +4,7 @@ const customerSchema = new mongoose.Schema({
   name:    { type: String, required: true },
   phone:   { type: String, required: true },
   phone2:  String,
+  village: String,
   address: String,
   idType:  { type: String, enum: ['Aadhaar', 'PAN', 'Voter ID', 'Passport', 'Other'], default: 'Aadhaar' },
   idNumber: String,

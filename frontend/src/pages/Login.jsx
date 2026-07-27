@@ -90,7 +90,7 @@ export default function Login() {
               <div>
                 <label className="label">Email address</label>
                 <input
-                  type="email" required value={email}
+                  type="email" inputMode="email" autoComplete="username" required value={email}
                   onChange={e => setEmail(e.target.value)}
                   className="input"
                   placeholder="admin@example.com"
@@ -100,7 +100,7 @@ export default function Login() {
               <div>
                 <label className="label">Password</label>
                 <input
-                  type="password" required value={password}
+                  type="password" autoComplete="current-password" required value={password}
                   onChange={e => setPassword(e.target.value)}
                   className="input"
                   placeholder="••••••••••"

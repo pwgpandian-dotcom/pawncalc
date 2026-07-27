@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { brand } from '../config/brand';
@@ -20,8 +20,18 @@ export default function Sidebar({ open, onClose }) {
   const { logout, user } = useAuth();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const handleLogout = () => { logout(); navigate('/login'); };
+
+  // Each item is active only on its own route. Active Loans (/loans) also stays
+  // active on a loan detail page (/loans/:id) — but never on /loans/new.
+  const isItemActive = (to) => {
+    if (to === '/loans') {
+      return pathname === '/loans' || (pathname.startsWith('/loans/') && pathname !== '/loans/new');
+    }
+    return pathname === to;
+  };
 
   return (
     <>
@@ -59,29 +69,26 @@ export default function Sidebar({ open, onClose }) {
           <div className="px-3 mb-3">
             <span className="text-white/30 text-xs font-bold uppercase tracking-widest font-display">Menu</span>
           </div>
-          {NAV.filter(({ adminOnly }) => !adminOnly || user?.role === 'admin').map(({ to, icon, label, color }) => (
-            <NavLink
-              key={to} to={to} end={to === '/'}
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+          {NAV.filter(({ adminOnly }) => !adminOnly || user?.role === 'admin').map(({ to, icon, label, color }) => {
+            const isActive = isItemActive(to);
+            return (
+              <NavLink
+                key={to} to={to} end
+                onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                  ${isActive
                    ? 'bg-gold-gradient text-white shadow-gold'
                    : 'text-white/60 hover:text-white hover:bg-white/8'
-                 }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <span className={`w-7 h-7 flex items-center justify-center rounded-lg text-sm flex-shrink-0
-                    ${isActive ? 'bg-white/20' : 'bg-white/8'}`}>
-                    <span className={isActive ? 'text-white' : color}>{icon}</span>
-                  </span>
-                  <span className="font-display">{label}</span>
-                </>
-              )}
-            </NavLink>
-          ))}
+                 }`}
+              >
+                <span className={`w-7 h-7 flex items-center justify-center rounded-lg text-sm flex-shrink-0
+                  ${isActive ? 'bg-white/20' : 'bg-white/8'}`}>
+                  <span className={isActive ? 'text-white' : color}>{icon}</span>
+                </span>
+                <span className="font-display">{label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
 
         {/* Footer */}

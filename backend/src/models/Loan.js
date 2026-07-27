@@ -1,7 +1,9 @@
 const mongoose = require('mongoose');
 
+// Round up: 1 month 2 days = 2 months
 function calcMonths(start, end) {
-  const days = (end - start) / (1000 * 60 * 60 * 24);
+  const days = (new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24);
+  if (days <= 0) return 0;
   const full = Math.floor(days / 30);
   return (days % 30) > 0 ? full + 1 : full;
 }
@@ -13,6 +15,14 @@ const paymentSchema = new mongoose.Schema({
   notes:    String
 }, { timestamps: true });
 
+// Top-up / extra principal borrowed after the loan was created
+const extraAmountSchema = new mongoose.Schema({
+  amount:  { type: Number, required: true },
+  date:    { type: Date, default: Date.now },
+  reason:  String,
+  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+}, { timestamps: true });
+
 const loanSchema = new mongoose.Schema({
   loanNumber:              { type: String, unique: true },
   customer:                { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
@@ -20,7 +30,7 @@ const loanSchema = new mongoose.Schema({
   itemDescription:         { type: String, required: true },
   itemWeight:              String,
   itemValue:               Number,
-  principalAmount:         { type: Number, required: true },
+  principalAmount:         { type: Number, required: true },   // CURRENT principal (original + all extras)
   interestRate:            { type: Number, required: true },
   pawnDate:                { type: Date, required: true, default: Date.now },
   expectedCloseDate:       Date,
@@ -29,23 +39,43 @@ const loanSchema = new mongoose.Schema({
   advanceInterestDeducted: { type: Boolean, default: false },
   advanceInterestAmount:   { type: Number, default: 0 },
   amountGivenToCustomer:   Number,
+  extraAmounts:            [extraAmountSchema],
   payments:                [paymentSchema],
   closingAmount:           Number,
   notes:                   String,
   createdBy:               { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
+// Generate the next numeric loan number (continues the sequence from the highest
+// existing number). Existing "LN00128" style numbers still seed the sequence via
+// their digits, so no data migration is needed.
+async function nextLoanNumber() {
+  const loans = await mongoose.model('Loan').find({}, 'loanNumber').lean();
+  let max = 0;
+  for (const l of loans) {
+    const n = parseInt(String(l.loanNumber || '').replace(/\D/g, ''), 10);
+    if (!isNaN(n) && n > max) max = n;
+  }
+  return String(max > 0 ? max + 1 : 1001);
+}
+loanSchema.statics.nextLoanNumber = nextLoanNumber;
+
 loanSchema.pre('save', async function (next) {
   if (!this.loanNumber) {
-    const count = await mongoose.model('Loan').countDocuments();
-    this.loanNumber = `LN${String(count + 1).padStart(5, '0')}`;
+    this.loanNumber = await nextLoanNumber();
   }
-  if (!this.amountGivenToCustomer) {
+  if (this.amountGivenToCustomer == null) {
     this.amountGivenToCustomer = this.advanceInterestDeducted
       ? this.principalAmount - this.advanceInterestAmount
       : this.principalAmount;
   }
   next();
+});
+
+// Original principal = current principal minus every extra top-up added later.
+loanSchema.virtual('originalPrincipal').get(function () {
+  const extras = (this.extraAmounts || []).reduce((s, e) => s + (e.amount || 0), 0);
+  return this.principalAmount - extras;
 });
 
 loanSchema.virtual('monthsElapsed').get(function () {
@@ -56,12 +86,26 @@ loanSchema.virtual('paidMonths').get(function () {
   return this.payments.reduce((s, p) => s + (p.months || 0), 0);
 });
 
-loanSchema.virtual('pendingMonths').get(function () {
-  return Math.max(this.monthsElapsed - this.paidMonths, 0);
+// Total interest accrued to date, computed per principal-segment so each extra
+// top-up only accrues interest from the date it was borrowed (future interest
+// on the updated principal — past interest is never inflated retroactively).
+loanSchema.virtual('accruedInterest').get(function () {
+  const asOf = this.actualCloseDate || new Date();
+  const rate = this.interestRate / 100;
+  const segments = [{ amount: this.originalPrincipal, date: this.pawnDate }];
+  for (const e of (this.extraAmounts || [])) {
+    segments.push({ amount: e.amount, date: e.date || e.createdAt || this.pawnDate });
+  }
+  return segments.reduce((sum, s) => sum + s.amount * rate * calcMonths(s.date, asOf), 0);
+});
+
+// Interest already paid (actual rupees recorded across payments).
+loanSchema.virtual('paidInterest').get(function () {
+  return this.payments.reduce((s, p) => s + (p.amount || 0), 0);
 });
 
 loanSchema.virtual('pendingInterest').get(function () {
-  return this.principalAmount * (this.interestRate / 100) * this.pendingMonths;
+  return Math.max(this.accruedInterest - this.paidInterest, 0);
 });
 
 loanSchema.virtual('settlementAmount').get(function () {

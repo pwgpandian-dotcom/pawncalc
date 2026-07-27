@@ -8,7 +8,7 @@ export default function Customers() {
   const [q, setQ]                 = useState('');
   const [loading, setLoading]     = useState(true);
   const [modal, setModal]         = useState(false);
-  const [form, setForm]           = useState({ name: '', phone: '', phone2: '', address: '', idType: 'Aadhaar', idNumber: '', notes: '', photo: null });
+  const [form, setForm]           = useState({ name: '', phone: '', phone2: '', village: '', address: '', idType: 'Aadhaar', idNumber: '', notes: '', photo: null });
   const [editId, setEditId]       = useState(null);
   const [saving, setSaving]       = useState(false);
 
@@ -16,16 +16,22 @@ export default function Customers() {
   useEffect(() => { load(); }, [q]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const reset = () => { setForm({ name: '', phone: '', phone2: '', address: '', idType: 'Aadhaar', idNumber: '', notes: '', photo: null }); setEditId(null); };
+  const setPhone = (k, v) => set(k, v.replace(/\D/g, '').slice(0, 10));
+  const reset = () => { setForm({ name: '', phone: '', phone2: '', village: '', address: '', idType: 'Aadhaar', idNumber: '', notes: '', photo: null }); setEditId(null); };
 
-  const openEdit = c => { setForm({ name: c.name, phone: c.phone, phone2: c.phone2||'', address: c.address||'', idType: c.idType||'Aadhaar', idNumber: c.idNumber||'', notes: c.notes||'', photo: c.photo||null }); setEditId(c._id); setModal(true); };
+  const openEdit = c => { setForm({ name: c.name, phone: c.phone, phone2: c.phone2||'', village: c.village||'', address: c.address||'', idType: c.idType||'Aadhaar', idNumber: c.idNumber||'', notes: c.notes||'', photo: c.photo||null }); setEditId(c._id); setModal(true); };
 
   const submit = async e => {
-    e.preventDefault(); setSaving(true);
+    e.preventDefault();
+    if (!/^[0-9]{10}$/.test(form.phone)) return alert('Mobile number must be exactly 10 digits');
+    if (form.phone2 && !/^[0-9]{10}$/.test(form.phone2)) return alert('Alternate number must be exactly 10 digits');
+    setSaving(true);
     try {
       if (editId) await api.put(`/customers/${editId}`, form);
       else        await api.post('/customers', form);
       setModal(false); reset(); load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save customer');
     } finally { setSaving(false); }
   };
 
@@ -45,7 +51,7 @@ export default function Customers() {
         <button onClick={() => { reset(); setModal(true); }} className="btn-gold">➕ Add Customer</button>
       </div>
 
-      <input className="input max-w-sm" placeholder="🔍 Search by name or phone…" value={q} onChange={e => setQ(e.target.value)} />
+      <input type="search" className="input max-w-sm" placeholder="🔍 Search by name or phone…" value={q} onChange={e => setQ(e.target.value)} />
 
       <div className="card">
         {loading ? (
@@ -70,7 +76,10 @@ export default function Customers() {
                       <div>{c.phone}</div>
                       {c.phone2 && <div className="text-xs text-slate-400">{c.phone2}</div>}
                     </td>
-                    <td className="text-slate-500 text-sm">{c.address || '—'}</td>
+                    <td className="text-slate-500 text-sm">
+                      {c.village && <div className="font-medium text-slate-600 dark:text-slate-300">🏡 {c.village}</div>}
+                      {c.address || (c.village ? '' : '—')}
+                    </td>
                     <td className="text-sm">
                       {c.idType && <span className="font-semibold">{c.idType}</span>}
                       {c.idNumber && <div className="text-xs text-slate-400">{c.idNumber}</div>}
@@ -101,15 +110,19 @@ export default function Customers() {
               <div className="grid sm:grid-cols-2 gap-3">
                 <div>
                   <label className="label">Full Name *</label>
-                  <input className="input" required placeholder="Customer name" value={form.name} onChange={e => set('name', e.target.value)} />
+                  <input type="text" autoComplete="name" className="input" required placeholder="Customer name" value={form.name} onChange={e => set('name', e.target.value)} />
                 </div>
                 <div>
-                  <label className="label">Phone *</label>
-                  <input className="input" required placeholder="Phone number" value={form.phone} onChange={e => set('phone', e.target.value)} />
+                  <label className="label">Mobile Number *</label>
+                  <input type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="tel" maxLength={10} className="input" required placeholder="10-digit mobile" value={form.phone} onChange={e => setPhone('phone', e.target.value)} />
                 </div>
                 <div>
-                  <label className="label">Phone 2</label>
-                  <input className="input" placeholder="Alternate number" value={form.phone2} onChange={e => set('phone2', e.target.value)} />
+                  <label className="label">Alternate Number</label>
+                  <input type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="tel" maxLength={10} className="input" placeholder="10-digit mobile" value={form.phone2} onChange={e => setPhone('phone2', e.target.value)} />
+                </div>
+                <div>
+                  <label className="label">Village</label>
+                  <input type="text" autoComplete="address-level3" className="input" placeholder="Village name" value={form.village} onChange={e => set('village', e.target.value)} />
                 </div>
                 <div>
                   <label className="label">ID Type</label>
@@ -119,12 +132,12 @@ export default function Customers() {
                 </div>
                 <div>
                   <label className="label">ID Number</label>
-                  <input className="input" placeholder="ID number" value={form.idNumber} onChange={e => set('idNumber', e.target.value)} />
+                  <input type="text" className="input" placeholder="ID number" value={form.idNumber} onChange={e => set('idNumber', e.target.value)} />
                 </div>
               </div>
               <div>
                 <label className="label">Address</label>
-                <input className="input" placeholder="Full address" value={form.address} onChange={e => set('address', e.target.value)} />
+                <input type="text" autoComplete="street-address" className="input" placeholder="Full address" value={form.address} onChange={e => set('address', e.target.value)} />
               </div>
               <div>
                 <label className="label">Notes</label>

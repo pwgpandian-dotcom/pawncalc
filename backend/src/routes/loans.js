@@ -1,8 +1,19 @@
 const router = require('express').Router();
 const Loan = require('../models/Loan');
+const Customer = require('../models/Customer');
 const auth = require('../middleware/auth');
 
 router.use(auth);
+
+// GET /api/loans/next-number — suggested next loan number (continues the sequence)
+router.get('/next-number', async (req, res) => {
+  try {
+    const next = await Loan.nextLoanNumber();
+    const hasLoans = (await Loan.countDocuments()) > 0;
+    // If no loans exist yet, let the admin type the first number themselves.
+    res.json({ next: hasLoans ? next : null });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
 
 router.get('/', async (req, res) => {
   try {
@@ -36,9 +47,59 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const loan = await Loan.create({ ...req.body, createdBy: req.user.id });
-    await loan.populate('customer', 'name phone');
+    const { customerData, ...loanData } = req.body;
+    let customerId = loanData.customer;
+
+    // Inline customer entry: find an existing customer by mobile, or create one.
+    if (!customerId && customerData) {
+      const name  = (customerData.name || '').trim();
+      const phone = (customerData.phone || '').trim();
+      if (!name)  return res.status(422).json({ message: 'Customer name is required' });
+      if (!/^[0-9]{10}$/.test(phone)) return res.status(422).json({ message: 'Mobile number must be exactly 10 digits' });
+
+      let customer = await Customer.findOne({ phone });
+      if (!customer) {
+        customer = await Customer.create({ name, phone, village: (customerData.village || '').trim() });
+      } else if (!customer.village && customerData.village) {
+        // Backfill village if we now have it and the record was missing one.
+        customer.village = customerData.village.trim();
+        await customer.save();
+      }
+      customerId = customer._id;
+    }
+
+    if (!customerId) return res.status(422).json({ message: 'Customer details are required' });
+
+    const loan = await Loan.create({ ...loanData, customer: customerId, createdBy: req.user.id });
+    await loan.populate('customer', 'name phone village');
     res.status(201).json(loan);
+  } catch (e) {
+    if (e.code === 11000) return res.status(409).json({ message: 'That loan number is already in use' });
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// POST /api/loans/:id/extra — add extra (top-up) amount to an active loan
+router.post('/:id/extra', async (req, res) => {
+  try {
+    const loan = await Loan.findById(req.params.id);
+    if (!loan) return res.status(404).json({ message: 'Loan not found' });
+    if (loan.status !== 'active') return res.status(400).json({ message: 'Can only add extra amount to an active loan' });
+
+    const amount = Number(req.body.amount);
+    if (!amount || amount <= 0) return res.status(422).json({ message: 'Enter a valid extra amount' });
+
+    loan.extraAmounts.push({
+      amount,
+      date:    req.body.date || new Date(),
+      reason:  req.body.reason,
+      addedBy: req.user.id
+    });
+    loan.principalAmount       += amount;   // grows the current principal
+    loan.amountGivenToCustomer  = (loan.amountGivenToCustomer || 0) + amount;
+    await loan.save();
+    await loan.populate('customer');
+    res.json(loan);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
