@@ -5,13 +5,10 @@ const auth = require('../middleware/auth');
 
 router.use(auth);
 
-// GET /api/loans/next-number — suggested next loan number (continues the sequence)
+// GET /api/loans/next-number — suggested next loan number (continues the LN000690 sequence)
 router.get('/next-number', async (req, res) => {
   try {
-    const next = await Loan.nextLoanNumber();
-    const hasLoans = (await Loan.countDocuments()) > 0;
-    // If no loans exist yet, let the admin type the first number themselves.
-    res.json({ next: hasLoans ? next : null });
+    res.json({ next: await Loan.nextLoanNumber() });
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 

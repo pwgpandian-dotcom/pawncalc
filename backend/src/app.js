@@ -63,8 +63,8 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/reports',   require('./routes/reports'));
 app.use('/api/staff',     require('./routes/staff'));
 
-app.get('/health', (_, res) => res.json({ status: 'ok', env: process.env.NODE_ENV, version: '2.1.0' }));
-app.get('/',       (_, res) => res.json({ status: 'PawnCalc API running', version: '2.1.0' }));
+app.get('/health', (_, res) => res.json({ status: 'ok', env: process.env.NODE_ENV, version: '2.2.0' }));
+app.get('/',       (_, res) => res.json({ status: 'PawnCalc API running', version: '2.2.0' }));
 
 // 404
 app.use((req, res) => res.status(404).json({ message: 'Route not found' }));

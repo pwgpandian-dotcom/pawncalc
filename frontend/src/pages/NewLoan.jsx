@@ -5,6 +5,8 @@ import { fmt, calcInterest, autoInterestRate } from '../utils/calculations';
 
 const today = () => new Date().toISOString().split('T')[0];
 const onlyDigits = (v, max) => v.replace(/\D/g, '').slice(0, max);
+// Loan numbers are "LN" + digits (e.g. LN000690) — keep letters and digits, uppercase.
+const loanNoInput = (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
 
 export default function NewLoan() {
   const navigate = useNavigate();
@@ -115,8 +117,8 @@ export default function NewLoan() {
         {/* Loan Number */}
         <div>
           <label className="label">Loan Number *</label>
-          <input className="input font-mono" required inputMode="numeric" pattern="[0-9]*" placeholder="e.g. 1001"
-            value={form.loanNumber} onChange={e => set('loanNumber', onlyDigits(e.target.value, 12))} />
+          <input className="input font-mono" required placeholder="e.g. LN000690"
+            value={form.loanNumber} onChange={e => set('loanNumber', loanNoInput(e.target.value))} />
           <p className="text-xs text-slate-400 mt-1">Auto-continues the sequence. Edit only to start a new series.</p>
         </div>
 

@@ -46,9 +46,19 @@ const loanSchema = new mongoose.Schema({
   createdBy:               { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
-// Generate the next numeric loan number (continues the sequence from the highest
-// existing number). Existing "LN00128" style numbers still seed the sequence via
-// their digits, so no data migration is needed.
+// Loan numbers are "LN" + a 6-digit zero-padded sequence (e.g. LN000690).
+// The next number continues from the highest existing number so duplicates can
+// never occur, but never dips below LOAN_START — the LN000690 start of the
+// current series. Older "LN00128" (5-digit) numbers still seed the sequence via
+// their digits, so all existing records are preserved with no data migration.
+const LOAN_PREFIX = 'LN';
+const LOAN_START  = 690;   // the series begins at LN000690
+const LOAN_PAD    = 6;     // 6-digit zero-padded numeric part
+
+function formatLoanNumber(n) {
+  return LOAN_PREFIX + String(n).padStart(LOAN_PAD, '0');
+}
+
 async function nextLoanNumber() {
   const loans = await mongoose.model('Loan').find({}, 'loanNumber').lean();
   let max = 0;
@@ -56,7 +66,7 @@ async function nextLoanNumber() {
     const n = parseInt(String(l.loanNumber || '').replace(/\D/g, ''), 10);
     if (!isNaN(n) && n > max) max = n;
   }
-  return String(max > 0 ? max + 1 : 1001);
+  return formatLoanNumber(Math.max(max + 1, LOAN_START));
 }
 loanSchema.statics.nextLoanNumber = nextLoanNumber;
 
