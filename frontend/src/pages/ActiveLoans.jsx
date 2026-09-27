@@ -46,7 +46,7 @@ export default function ActiveLoans() {
               </tr></thead>
               <tbody>
                 {filtered.map(l => {
-                  const overdue = l.expectedCloseDate && new Date() > new Date(l.expectedCloseDate);
+                  const overdue = l.isOverdue;
                   return (
                     <tr key={l._id}>
                       <td><span className="font-mono font-bold text-gold-500">{l.loanNumber}</span></td>

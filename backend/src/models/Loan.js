@@ -70,6 +70,13 @@ async function nextLoanNumber() {
 }
 loanSchema.statics.nextLoanNumber = nextLoanNumber;
 
+// Single definition of "overdue" for queries: active loans past their expected close
+// date. Every route that needs this filter (overdue list, dashboard, reports) uses
+// this instead of re-writing the predicate, so the rule can never drift between them.
+loanSchema.statics.overdueFilter = function () {
+  return { status: 'active', expectedCloseDate: { $lt: new Date() } };
+};
+
 loanSchema.pre('save', async function (next) {
   if (!this.loanNumber) {
     this.loanNumber = await nextLoanNumber();
@@ -92,8 +99,11 @@ loanSchema.virtual('monthsElapsed').get(function () {
   return calcMonths(this.pawnDate, this.actualCloseDate || new Date());
 });
 
+// Months already covered: recorded payments, plus the first month if its interest
+// was deducted upfront at loan creation (that month is paid — just paid in advance).
 loanSchema.virtual('paidMonths').get(function () {
-  return this.payments.reduce((s, p) => s + (p.months || 0), 0);
+  const fromPayments = this.payments.reduce((s, p) => s + (p.months || 0), 0);
+  return fromPayments + (this.advanceInterestDeducted ? 1 : 0);
 });
 
 // Total interest accrued to date, computed per principal-segment so each extra
@@ -109,9 +119,13 @@ loanSchema.virtual('accruedInterest').get(function () {
   return segments.reduce((sum, s) => sum + s.amount * rate * calcMonths(s.date, asOf), 0);
 });
 
-// Interest already paid (actual rupees recorded across payments).
+// Interest already paid: rupees recorded across payments, plus the advance amount
+// deducted upfront at creation. Without this, the first month's interest — already
+// collected out of the payout — would be charged again at settlement.
 loanSchema.virtual('paidInterest').get(function () {
-  return this.payments.reduce((s, p) => s + (p.amount || 0), 0);
+  const fromPayments = this.payments.reduce((s, p) => s + (p.amount || 0), 0);
+  const advance = this.advanceInterestDeducted ? (this.advanceInterestAmount || 0) : 0;
+  return fromPayments + advance;
 });
 
 loanSchema.virtual('pendingInterest').get(function () {

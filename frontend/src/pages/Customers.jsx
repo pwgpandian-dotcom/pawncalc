@@ -23,7 +23,7 @@ export default function Customers() {
 
   const submit = async e => {
     e.preventDefault();
-    if (!/^[0-9]{10}$/.test(form.phone)) return alert('Mobile number must be exactly 10 digits');
+    if (form.phone && !/^[0-9]{10}$/.test(form.phone)) return alert('Mobile number must be exactly 10 digits');
     if (form.phone2 && !/^[0-9]{10}$/.test(form.phone2)) return alert('Alternate number must be exactly 10 digits');
     setSaving(true);
     try {
@@ -113,8 +113,8 @@ export default function Customers() {
                   <input type="text" autoComplete="name" className="input" required placeholder="Customer name" value={form.name} onChange={e => set('name', e.target.value)} />
                 </div>
                 <div>
-                  <label className="label">Mobile Number *</label>
-                  <input type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="tel" maxLength={10} className="input" required placeholder="10-digit mobile" value={form.phone} onChange={e => setPhone('phone', e.target.value)} />
+                  <label className="label">Mobile Number</label>
+                  <input type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="tel" maxLength={10} className="input" placeholder="10-digit mobile (optional)" value={form.phone} onChange={e => setPhone('phone', e.target.value)} />
                 </div>
                 <div>
                   <label className="label">Alternate Number</label>

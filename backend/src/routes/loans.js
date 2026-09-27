@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
 
 router.get('/overdue', async (req, res) => {
   try {
-    const loans = await Loan.find({ status: 'active', expectedCloseDate: { $lt: new Date() } })
+    const loans = await Loan.find(Loan.overdueFilter())
       .populate('customer', 'name phone').sort({ expectedCloseDate: 1 });
     res.json(loans);
   } catch (e) { res.status(500).json({ message: e.message }); }
@@ -47,21 +47,18 @@ router.post('/', async (req, res) => {
     const { customerData, ...loanData } = req.body;
     let customerId = loanData.customer;
 
-    // Inline customer entry: find an existing customer by mobile, or create one.
+    // Inline customer entry: ALWAYS creates a new customer record from exactly what
+    // was typed. Matching to an existing customer must be an intentional pick (the
+    // `customer` id above, from the New Loan customer search) — never inferred here
+    // by phone, which used to silently attach the loan to a differently-named
+    // existing record whenever the typed phone happened to match one already saved.
     if (!customerId && customerData) {
       const name  = (customerData.name || '').trim();
       const phone = (customerData.phone || '').trim();
       if (!name)  return res.status(422).json({ message: 'Customer name is required' });
-      if (!/^[0-9]{10}$/.test(phone)) return res.status(422).json({ message: 'Mobile number must be exactly 10 digits' });
+      if (phone && !/^[0-9]{10}$/.test(phone)) return res.status(422).json({ message: 'Mobile number must be exactly 10 digits' });
 
-      let customer = await Customer.findOne({ phone });
-      if (!customer) {
-        customer = await Customer.create({ name, phone, village: (customerData.village || '').trim() });
-      } else if (!customer.village && customerData.village) {
-        // Backfill village if we now have it and the record was missing one.
-        customer.village = customerData.village.trim();
-        await customer.save();
-      }
+      const customer = await Customer.create({ name, phone: phone || undefined, village: (customerData.village || '').trim() });
       customerId = customer._id;
     }
 

@@ -21,6 +21,39 @@ export default function NewLoan() {
   const [error, setError]   = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Existing-customer lookup. The backend never auto-merges by phone anymore (that
+  // used to silently attach a loan to a differently-named record whenever a typed
+  // phone happened to match one already saved) — so matching to an existing
+  // customer, by name or phone, must be surfaced here for an intentional pick.
+  // Typing a brand-new name/phone and never clicking a suggestion always creates a
+  // brand-new customer, exactly as typed.
+  const [customerId, setCustomerId] = useState(null);
+  const [matches, setMatches]       = useState([]);
+
+  useEffect(() => {
+    if (customerId) { setMatches([]); return; }
+    const name  = form.customerName.trim();
+    const phone = form.customerPhone.trim();
+    const q = phone.length >= 4 ? phone : (name.length >= 2 ? name : '');
+    if (!q) { setMatches([]); return; }
+    const t = setTimeout(() => {
+      api.get(`/customers?q=${encodeURIComponent(q)}`)
+        .then(r => setMatches(r.data.slice(0, 5)))
+        .catch(() => {});
+    }, 300);
+    return () => clearTimeout(t);
+  }, [form.customerName, form.customerPhone, customerId]);
+
+  const pickCustomer = c => {
+    setCustomerId(c._id);
+    setMatches([]);
+    setForm(f => ({ ...f, customerName: c.name, customerPhone: c.phone || '', village: c.village || '' }));
+  };
+  const clearCustomer = () => {
+    setCustomerId(null);
+    setForm(f => ({ ...f, customerName: '', customerPhone: '', village: '' }));
+  };
+
   // Prefill the next loan number (continues the sequence). null = admin enters the first one.
   useEffect(() => {
     api.get('/loans/next-number')
@@ -47,17 +80,21 @@ export default function NewLoan() {
   const submit = async e => {
     e.preventDefault();
     if (!form.customerName.trim())            return setError('Customer name is required');
-    if (!/^[0-9]{10}$/.test(form.customerPhone)) return setError('Mobile number must be exactly 10 digits');
+    if (form.customerPhone && !/^[0-9]{10}$/.test(form.customerPhone)) return setError('Mobile number must be exactly 10 digits');
     if (!form.loanNumber.trim())              return setError('Loan number is required');
     setError(''); setSaving(true);
     try {
       const payload = {
         loanNumber: form.loanNumber.trim(),
-        customerData: {
-          name:    form.customerName.trim(),
-          phone:   form.customerPhone.trim(),
-          village: form.village.trim()
-        },
+        // An explicitly picked existing customer always wins — avoids creating a
+        // duplicate, disconnected customer record for a repeat (esp. phone-less) visitor.
+        ...(customerId ? { customer: customerId } : {
+          customerData: {
+            name:    form.customerName.trim(),
+            phone:   form.customerPhone.trim(),
+            village: form.village.trim()
+          }
+        }),
         itemType: form.itemType,
         itemDescription: form.itemDescription,
         itemWeight: form.itemWeight,
@@ -91,26 +128,48 @@ export default function NewLoan() {
         {/* Customer — entered directly, no need to visit the Customers page */}
         <div>
           <h2 className="font-bold text-slate-600 dark:text-slate-300 text-sm uppercase tracking-wider mb-3">Customer Details</h2>
+
+          {customerId && (
+            <div className="flex items-center justify-between gap-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-2.5 mb-3">
+              <span className="text-sm text-emerald-700 dark:text-emerald-400">✅ Using existing customer — this loan will be linked to their record.</span>
+              <button type="button" onClick={clearCustomer} className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex-shrink-0">✕ Change</button>
+            </div>
+          )}
+
           <div className="grid sm:grid-cols-3 gap-4">
-            <div>
+            <div className="relative">
               <label className="label">Customer Name *</label>
-              <input type="text" autoComplete="name" className="input" required placeholder="Full name"
+              <input type="text" autoComplete="off" className="input" required placeholder="Full name"
+                disabled={!!customerId}
                 value={form.customerName} onChange={e => set('customerName', e.target.value)} />
+              {matches.length > 0 && (
+                <div className="absolute z-10 top-full left-0 right-0 mt-1 card p-1 shadow-lg">
+                  {matches.map(c => (
+                    <button type="button" key={c._id} onClick={() => pickCustomer(c)}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-gold-500/10 text-sm">
+                      <div className="font-semibold">{c.name}</div>
+                      <div className="text-xs text-slate-400">{c.phone || 'No phone'}{c.village ? ` · ${c.village}` : ''}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
-              <label className="label">Mobile Number *</label>
+              <label className="label">Mobile Number</label>
               <input type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="tel" maxLength={10}
-                className="input" required placeholder="10-digit mobile"
+                className="input" placeholder="10-digit mobile (optional)" disabled={!!customerId}
                 value={form.customerPhone} onChange={e => set('customerPhone', onlyDigits(e.target.value, 10))} />
             </div>
             <div>
               <label className="label">Village Name</label>
-              <input type="text" autoComplete="address-level3" className="input" placeholder="Recommended"
+              <input type="text" autoComplete="address-level3" className="input" placeholder="Recommended" disabled={!!customerId}
                 value={form.village} onChange={e => set('village', e.target.value)} />
             </div>
           </div>
           <p className="text-xs text-slate-400 mt-1.5">
-            If this mobile number already exists, the existing customer is used automatically — no duplicates.
+            {customerId
+              ? 'To edit this customer\'s details, use the Customers page.'
+              : 'If this is a returning customer, pick them from the matches above — otherwise a new customer is created exactly as typed.'}
           </p>
         </div>
 

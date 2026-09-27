@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
       totalClosed:  loans.filter(l => l.status === 'closed').length,
       totalRecovered: loans.filter(l => l.status === 'closed').reduce((s, l) => s + (l.closingAmount || 0), 0),
       totalActive:  loans.filter(l => l.status === 'active').length,
-      totalOverdue: loans.filter(l => l.status === 'active' && l.expectedCloseDate && new Date() > l.expectedCloseDate).length
+      totalOverdue: loans.filter(l => l.isOverdue).length
     };
     res.json({ loans, summary });
   } catch (e) { res.status(500).json({ message: e.message }); }

@@ -10,7 +10,7 @@ router.get('/stats', async (req, res) => {
     const [activeLoans, closedLoans, overdueLoans, totalCustomers] = await Promise.all([
       Loan.find({ status: 'active' }),
       Loan.find({ status: 'closed' }),
-      Loan.find({ status: 'active', expectedCloseDate: { $lt: new Date() } }),
+      Loan.find(Loan.overdueFilter()),
       Customer.countDocuments()
     ]);
 

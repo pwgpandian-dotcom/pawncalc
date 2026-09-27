@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { fmt, fmtDate, calcMonths, calcSettlement } from '../utils/calculations';
+import { fmt, fmtDate } from '../utils/calculations';
 
 export default function OverdueLoans() {
   const [loans, setLoans]     = useState([]);
@@ -32,9 +32,11 @@ export default function OverdueLoans() {
       ) : (
         <div className="space-y-3">
           {loans.map(l => {
-            const months     = calcMonths(l.pawnDate, new Date());
-            const paidMonths = l.payments?.reduce((s, p) => s + (p.months || 0), 0) || 0;
-            const settlement = calcSettlement(l.principalAmount, l.interestRate, months, paidMonths);
+            // Use the loan's own computed fields (from the API) rather than recomputing
+            // client-side, so this matches Loan Detail exactly — including extra top-ups.
+            const months     = l.monthsElapsed;
+            const paidMonths = l.paidMonths;
+            const settlement = { total: l.settlementAmount, interest: l.pendingInterest };
             const daysOverdue = Math.floor((new Date() - new Date(l.expectedCloseDate)) / (1000 * 60 * 60 * 24));
 
             return (

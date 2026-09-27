@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api';
-import { fmt, fmtDate, calcMonths, loanSettlement } from '../utils/calculations';
+import { fmt, fmtDate } from '../utils/calculations';
 import { printLoanReceipt } from '../utils/print';
 
 const today = () => new Date().toISOString().split('T')[0];
@@ -26,12 +26,14 @@ export default function LoanDetail() {
   if (loading) return <div className="text-center py-20 text-slate-400">Loading…</div>;
   if (!loan) return <div className="text-center py-20 text-red-400">Loan not found</div>;
 
-  const monthsElapsed = calcMonths(loan.pawnDate, loan.actualCloseDate || new Date());
-  const paidMonths    = loan.payments.reduce((s, p) => s + (p.months || 0), 0);
-  const settlement    = loanSettlement(loan, loan.actualCloseDate || new Date());
+  // Read the loan's own computed fields from the API (Loan model virtuals) rather than
+  // recomputing client-side, so every screen agrees on the same numbers for this loan.
+  const monthsElapsed = loan.monthsElapsed;
+  const paidMonths    = loan.paidMonths;
+  const settlement    = { principal: loan.principalAmount, paid: loan.paidInterest, interest: loan.pendingInterest, total: loan.settlementAmount };
   const extras        = loan.extraAmounts || [];
   const extraTotal    = extras.reduce((s, e) => s + (e.amount || 0), 0);
-  const originalPrincipal = loan.originalPrincipal != null ? loan.originalPrincipal : loan.principalAmount - extraTotal;
+  const originalPrincipal = loan.originalPrincipal;
 
   const addPayment = async () => {
     setSaving(true);
