@@ -15,7 +15,7 @@ export default function Login() {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Check your credentials.');
