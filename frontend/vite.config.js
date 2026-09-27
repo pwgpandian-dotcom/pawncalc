@@ -7,6 +7,12 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // We call registerSW() ourselves in main.jsx (via virtual:pwa-register) so the
+      // app can actually react to and reload on a new deployment — the default
+      // auto-injected script only calls navigator.serviceWorker.register() with no
+      // update-detection or reload logic, so an already-installed PWA never notices
+      // a new version until it happens to be manually reinstalled.
+      injectRegister: false,
       includeAssets: ['sri-ayyanar-logo.png', 'apple-touch-icon.png', 'icon-*.png'],
       manifest: {
         name: 'Sri Ayyanar Finance',
@@ -28,16 +34,16 @@ export default defineConfig({
       workbox: {
         // Cache static assets (JS, CSS, fonts, images) — cache first
         globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff,woff2}'],
-        // Financial data (loans, customers) — always network first, never stale
+        // Never precache/serve stale HTML for a navigation — always check the
+        // network first so a new deployment's index.html is picked up promptly.
+        navigateFallback: null,
         runtimeCaching: [
+          // Supabase reads/writes — always go to network, never served from cache.
+          // (There is no more relative /api/* backend to cache; this project talks
+          // directly to Supabase's REST/RPC endpoints.)
           {
-            urlPattern: /\/api\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              networkTimeoutSeconds: 10,
-              cacheableResponse: { statuses: [0, 200] },
-            },
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            handler: 'NetworkOnly',
           },
           {
             urlPattern: /https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
